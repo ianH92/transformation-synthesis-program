@@ -1,4 +1,4 @@
- import javafx.application.Application;
+import javafx.application.Application;
 import javafx.event.EventHandler;
 import javafx.event.ActionEvent; 
 import javafx.scene.Scene;
@@ -51,17 +51,14 @@ import java.util.InputMismatchException;
  */
 public class TransformationSynthesisProgram extends Application {
 	// Use this flag to determine what method of user input is being used
-	private int userInputFlag = 0;
 	private int algorithmFlag = 0;
 	
 	// This is the current number of function inputs
 	private int inputs = 3;
 	
 	// Variables that hold the truth tables
-	private TextField[][] userInput;
+	private TextField[] userInput;
 	private GridPane truthTable;
-	private TextField[] userInputSimple;
-	private GridPane truthTableSimple;
 	private Canvas t;
 	private Group r;
 	
@@ -95,27 +92,16 @@ public class TransformationSynthesisProgram extends Application {
 		// Set the title of the program
 		primaryStage.setTitle("Transformation Based Synthesis Program");
 		
-		// Create the complex truthTable
-		this.userInput = userInputFields(inputs);
-		this.truthTable = truthTable(TTABLEWIDTH, TTABLEHEIGHT, this.inputs, this.userInput);
-		
-		// Create the simple truthTable
-		this.userInputSimple = userInputFieldsSimple(inputs);
-		this.truthTableSimple = truthTableSimple(TTABLEWIDTH, TTABLEHEIGHT, this.inputs, this.userInputSimple);
+		// Create truthTable
+		userInput = userInputFieldsSimple(inputs);
+		truthTable = truthTableSimple(TTABLEWIDTH, TTABLEHEIGHT, inputs, userInput);
 		
 		// Create the truth table scroll pane and put the complex truth table in it	
 		ScrollPane sL = new ScrollPane();
 		sL.setContent(truthTable);
 		sL.setFitToHeight(true);
 		sL.setMinHeight(350.0);
-		//sL.setMaxHeight(400.0);
 		sL.setMinWidth(250.0);
-		//sL.setMaxWidth(250.0);
-		
-		// Create GridPane that will hold the steps
-		GridPane steps = new GridPane();
-		steps.setHgap(2);
-		steps.setVgap(0);
 		
 		// Create initial circuit display
 		this.t = CircuitDisplay(500, 200, null);
@@ -150,31 +136,22 @@ public class TransformationSynthesisProgram extends Application {
 					String[][] specification = readSpecificationFileToString(name);
 					int rows = specification.length;
 					int columns = specification[0].length;
-					this.inputs = columns;
-					// Create the complex truthTable
-					this.userInput = userInputFields(inputs);
-					this.truthTable = truthTable(TTABLEWIDTH, TTABLEHEIGHT, this.inputs, this.userInput);
+					inputs = columns;
+					
 					// Create the simple truthTable
-					this.userInputSimple = userInputFieldsSimple(inputs);
-					this.truthTableSimple = truthTableSimple(TTABLEWIDTH, TTABLEHEIGHT, this.inputs, this.userInputSimple);
+					userInput = userInputFieldsSimple(inputs);
+					truthTable = truthTableSimple(TTABLEWIDTH, TTABLEHEIGHT, inputs, userInput);
 					
 					for(int i = 0; i < rows; i++) {
 						String tmp = "";
 						for(int j = 0; j < columns; j++) {
-							this.userInput[i][j].setText(specification[i][j]);
 							tmp += specification[i][j];
 						}
-						this.userInputSimple[i].setText(tmp);
+						userInput[i].setText(tmp);
 					}
 					
-					if(userInputFlag == 0) {
-						sL.setContent(truthTable);
-					} else {
-						sL.setContent(truthTableSimple);
-					}
-					
+					sL.setContent(truthTable);
 					filePrompt.close();
-					
 				} catch(UserInputException err) {
 					errorDisplay(err);
 				}
@@ -226,20 +203,8 @@ public class TransformationSynthesisProgram extends Application {
 		});
 		file.getItems().addAll(load1, load2);
 		
-		final Menu view = new Menu("View");
-		MenuItem switchTable = new MenuItem("Switch Input Method");
-		switchTable.setOnAction(e -> {
-			if(userInputFlag == 0) {
-				sL.setContent(truthTableSimple);
-				userInputFlag = 1;
-			} else {
-				sL.setContent(truthTable);
-				userInputFlag = 0;
-			}
-		});
-		view.getItems().add(switchTable);
 		final Menu help = new Menu("Help"); 
-		mainMenu.getMenus().addAll(file, view, help);
+		mainMenu.getMenus().addAll(file, help);
 		
 		// Create the toolbar
 		ToolBar topBar = new ToolBar();
@@ -258,15 +223,9 @@ public class TransformationSynthesisProgram extends Application {
 					"range of [1, 26] for # of function arguments"));
 				} else {
 					inputs = tmp2;
-					userInput = userInputFields(inputs);
-					truthTable = truthTable(TTABLEWIDTH, TTABLEHEIGHT, inputs, userInput);
-					userInputSimple = userInputFieldsSimple(inputs);
-					truthTableSimple = truthTableSimple(TTABLEWIDTH, TTABLEHEIGHT, inputs, userInputSimple);
-					if(userInputFlag == 0) {
-						sL.setContent(truthTable);
-					} else {
-						sL.setContent(truthTableSimple);
-					}
+					userInput = userInputFieldsSimple(inputs);
+					truthTable = truthTableSimple(TTABLEWIDTH, TTABLEHEIGHT, inputs, userInput);
+					sL.setContent(truthTable);
 				}
 			} catch(NumberFormatException err) {
 				errorDisplay(new UserInputException("Value entered for # of function arguments " +
@@ -279,11 +238,7 @@ public class TransformationSynthesisProgram extends Application {
 		generate.setOnAction(e -> {
 			try {
 				int[][] input = null;
-				if(this.userInputFlag == 0) {
-					input = processUserInput(userInput);
-				} else {
-					input = processUserInputSimple(userInputSimple);
-				}
+				input = processUserInputSimple(userInput);
 				
 				if(this.algorithmFlag == 0) {
 					input = TransformationAlgorithms.outputAlgorithm(input);
@@ -301,13 +256,11 @@ public class TransformationSynthesisProgram extends Application {
 			} catch(UserInputException err) {
 				errorDisplay(err);
 			}
-		
 		});
 		// Create the clear all inputs button
 		Button clearInput = new Button("Clear all Inputs");
 		clearInput.setOnAction(e -> {
-				clearUserInputFields(userInput);
-				clearUserInputFieldsSimple(userInputSimple);
+				clearUserInputFieldsSimple(userInput);
 			}
 		);
 		// Create the toggles for the algorithm options
@@ -499,45 +452,6 @@ public class TransformationSynthesisProgram extends Application {
 	 * @param inputs The number of inputs to the function
 	 * @param userInput The TextFields to use
 	 */
-	private GridPane truthTable(double width, double height, int inputs, TextField[][] userInput) {
-		int inset = 10;
-		int rows = (int) Math.pow(2, inputs);
-		
-		// Create the GridPane that will hold the TruthTable
-		GridPane truthTable = new GridPane();
-		truthTable.setHgap(2);
-		truthTable.setVgap(2);
-		truthTable.setPadding(new Insets(inset, inset, inset, inset));
-		
-		// Add instructions
-		truthTable.add(new Text("Input Function Truth Table:"), 0, 0, 20, 1);
-		
-		String tmp = "";
-		for(int i = 0; i < inputs; i++) {
-			tmp += this.labels[(inputs - 1 - i) % this.labels.length];
-			truthTable.add(new Text("    " + this.labels[(inputs - 1 - i) % this.labels.length] + "\u2070"), (1 + i), 1);
-		}
-		truthTable.add(new Text(tmp), 0, 1);
-		
-		// Add the Textfields
-		for(int i = 0; i < rows; i++) {
-			truthTable.add(new Text(paddedBinaryRep(i, inputs)), 0, (i + 2));
-			for(int j = 0; j < inputs; j++) {
-				// Set the prefered width of the table
-				userInput[i][j] = new TextField();
-				userInput[i][j].setPrefWidth(30);
-				truthTable.add(userInput[i][j], (1 + j), (i + 2));
-			}
-		}
-		return truthTable;
-	}
-	
-	/** Creates a truth table like collection of TextFields
-	 * @param width The width of the GridPane
-	 * @param height The height of the GridPane
-	 * @param inputs The number of inputs to the function
-	 * @param userInput The TextFields to use
-	 */
 	private GridPane truthTableSimple(double width, double height, int inputs, TextField[] userInput) {
 		int inset = 10;
 		int rows = (int) Math.pow(2, inputs);
@@ -574,16 +488,6 @@ public class TransformationSynthesisProgram extends Application {
 	/** Creates a collection of TextFields
 	 * @param inputs The number of inputs to the Boolean function
 	 */
-	private TextField[][] userInputFields(int inputs) {
-		int rows = (int) Math.pow(2, inputs);
-		// Create an array to hold the TextFields
-		TextField[][] userInput = new TextField[rows][inputs];	
-		return userInput;
-	}
-	
-	/** Creates a collection of TextFields
-	 * @param inputs The number of inputs to the Boolean function
-	 */
 	private TextField[] userInputFieldsSimple(int inputs) {
 		int rows = (int) Math.pow(2, inputs);
 		// Create an array to hold the TextFields
@@ -607,33 +511,6 @@ public class TransformationSynthesisProgram extends Application {
 		} else {
 			return num;
 		}
-	}
-	
-	/** Processes user input contained in the TextFields
-	 * @param The TextFields containing user input
-	 * @return The int[][] representation of the user input
-	 */
-	private int[][] processUserInput(TextField[][] userInput) throws UserInputException {
-		int rows = userInput.length;
-		int columns = userInput[0].length;
-		int[][] input = new int[rows][columns];
-		
-		String tmp;
-		// Traverse the rows
-		for(int i = 0; i < rows; i++) {
-			// Traverse the columns
-			for(int j = 0; j  < columns; j++) {
-				tmp = userInput[i][j].getText();
-				if(tmp.equals("1") || tmp.equals("0")) {
-					input[i][j] = Integer.parseInt(tmp);
-				} else if(tmp.equals("")) {
-					throw new UserInputException("Input needed in Table row " + i + ", oulumn " + j + ".");
-				} else {
-					throw new UserInputException("Invalid input in Table row " + i + ", column " + j + ".");
-				}
-			}
-		}
-		return input;
 	}
 	
 	/** Processes user input contained in the TextFields
@@ -678,21 +555,6 @@ public class TransformationSynthesisProgram extends Application {
 			exp++;
 		}
 		return exp;
-	}
-	
-	/** Clears the user input in a collection of TextFields
-	 * @param userInput The array of TextFields to be cleared
-	 */
-	private void clearUserInputFields(TextField[][] userInput) {
-		int rows = userInput.length;
-		int columns = userInput[0].length;
-		// Traverse the rows
-		for(int i = 0; i < rows; i++) {
-			// Traverse the columns
-			for(int j = 0; j  < columns; j++) {
-				userInput[i][j].clear();
-			}
-		}
 	}
 	
 	/** Clears the user input in a collection of TextFields
